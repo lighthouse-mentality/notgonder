@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Günlük Not</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root { --bg:#f7f6f2; --card:#fff; --tx:#1d1d1b; --mut:#6b6a64; --ac:#1f6f5c; --acbg:#e3f1ec; --bd:#dcdad2; box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#17181a; --card:#212326; --tx:#ecebe6; --mut:#9a9990; --ac:#5fc4a8; --acbg:#1f3a33; --bd:#363840; } }
+html { scroll-padding-top:env(safe-area-inset-top,0px); }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--tx); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+main { max-width:560px; margin:0 auto; padding:16px; }
+h1 { font-size:20px; margin:8px 0 4px; }
+.hint { color:var(--mut); font-size:14px; margin:0 0 12px; }
+.card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:14px; }
+label { display:block; font-size:14px; font-weight:600; margin:14px 0 6px; }
+label:first-child { margin-top:0; }
+input[type=text] { width:100%; padding:10px; border:1px solid var(--bd); border-radius:8px; background:var(--bg); color:var(--tx); font:inherit; }
+input[type=range] { width:100%; accent-color:var(--ac); }
+.chips { display:flex; flex-wrap:wrap; gap:8px; }
+.chip { padding:9px 13px; border:1px solid var(--bd); border-radius:20px; background:var(--bg); color:var(--tx); font:inherit; font-size:14px; }
+.chip.on { background:var(--acbg); border-color:var(--ac); color:var(--ac); font-weight:600; }
+.btn { display:block; width:100%; padding:13px; border:0; border-radius:10px; background:var(--ac); color:var(--bg); font:inherit; font-weight:600; margin-top:14px; text-align:center; text-decoration:none; }
+.btn.alt { background:var(--acbg); color:var(--ac); }
+.big { font-size:26px; font-weight:700; color:var(--ac); }
+pre { white-space:pre-wrap; background:var(--bg); border:1px solid var(--bd); border-radius:8px; padding:10px; font:14px/1.45 ui-monospace,Menlo,Consolas,monospace; margin-top:14px; }
+[hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+<h1>Günlük Not</h1>
+<p class="hint">30 saniye. Yazmak yok, dokunman yeter. Sonunda “WhatsApp ile gönder”e bas.</p>
+<div class="card">
+ <label>Şu an öfke / gerginlik: <span class="big" id="yv">5</span>/10</label>
+ <input type="range" id="y" min="0" max="10" value="5">
+
+ <label>Nerede?</label>
+ <div class="chips" data-single="yer"><button class="chip">Şube</button><button class="chip">Ev</button><button class="chip">Başka yer</button></div>
+
+ <label>Ne tetikledi?</label>
+ <div class="chips" data-multi="tet"><button class="chip">Plan değişti</button><button class="chip">Bir şey yerinde değildi</button><button class="chip">Beni dinlemediler</button><button class="chip">Eşimle anlaşmazlık</button><button class="chip">Eşim bir yere gitmek istedi</button><button class="chip">Bir karar bana sorulmadı</button><button class="chip">Biri istediğim gibi davranmadı</button><button class="chip">Başka</button></div>
+
+ <label>Bedende ne hissettim?</label>
+ <div class="chips" data-multi="beden"><button class="chip">Çene sıkma</button><button class="chip">Nefes hızlandı</button><button class="chip">Sıcak bastı</button><button class="chip">Yumruk</button><button class="chip">Ses yükseldi</button></div>
+
+ <label>Öfkeden önce ne hissettim?</label>
+ <div class="chips" data-multi="duygu"><button class="chip">Çaresizlik</button><button class="chip">Duyulmamak</button><button class="chip">Haksızlık</button><button class="chip">Kontrol kaybı</button><button class="chip">Yorgunluk</button></div>
+
+ <label>Düzen ihtiyacı mı, kontrol mü?</label>
+ <div class="chips" data-single="dk"><button class="chip">Düzen ihtiyacı</button><button class="chip">Kontrol</button><button class="chip">Emin değilim</button></div>
+
+ <label>Ne yaptım?</label>
+ <div class="chips" data-multi="yap"><button class="chip">Durakladım</button><button class="chip">Ortamdan çıktım</button><button class="chip">Konuştum</button><button class="chip">Bir kararı bıraktım</button><button class="chip">Bağırdım</button></div>
+
+ <label>Bir cümle (isteğe bağlı)</label>
+ <input type="text" id="not">
+
+ <a class="btn" id="wa" target="_blank" rel="noopener">WhatsApp ile gönder</a>
+ <button class="btn alt" id="copy">Kopyala</button>
+ <pre id="out"></pre>
+</div>
+</main>
+<script>
+var S = {};
+var NUM = "905433783735";
+function $(id) { return document.getElementById(id); }
+function sel(k) { return (S[k] || []).join(", "); }
+function line(label, v) { return v ? label + ": " + v + "\n" : ""; }
+
+document.querySelectorAll("[data-single],[data-multi]").forEach(function (box) {
+  var key = box.getAttribute("data-single") || box.getAttribute("data-multi");
+  var single = box.hasAttribute("data-single");
+  S[key] = [];
+  box.querySelectorAll(".chip").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var t = b.textContent;
+      if (single) {
+        box.querySelectorAll(".chip").forEach(function (x) { x.classList.remove("on"); });
+        if (S[key][0] === t) { S[key] = []; } else { S[key] = [t]; b.classList.add("on"); }
+      } else {
+        var i = S[key].indexOf(t);
+        if (i >= 0) { S[key].splice(i, 1); b.classList.remove("on"); } else { S[key].push(t); b.classList.add("on"); }
+      }
+    });
+  });
+});
+
+$("y").oninput = function () { $("yv").textContent = this.value; };
+
+var text = "";
+function build() {
+  var d = new Date();
+  var when = d.toLocaleDateString("tr-TR") + " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  text = "NOT – " + when + "\n" + line("Yoğunluk", $("y").value + "/10") + line("Yer", sel("yer")) + line("Tetikleyici", sel("tet")) + line("Beden", sel("beden")) + line("Önceki duygu", sel("duygu")) + line("Düzen/kontrol", sel("dk")) + line("Ne yaptım", sel("yap")) + line("Not", $("not").value.trim());
+  $("out").textContent = text;
+  $("wa").href = "https://wa.me/" + NUM + "?text=" + encodeURIComponent(text);
+}
+build();
+document.addEventListener("click", function () { setTimeout(build, 0); });
+document.addEventListener("input", build);
+$("copy").onclick = function () {
+  var b = this;
+  var done = function () { b.textContent = "Kopyalandı"; };
+  try { navigator.clipboard.writeText(text).then(done, done); } catch (e) { done(); }
+};
+</script>
+</body>
+</html>
