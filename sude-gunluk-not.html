@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Günlük Not</title>
+<style>
+:root{
+  --bg:#f4f4f8; --card:#ffffff; --text:#1f2233; --muted:#5f6478; --line:#dcdde8;
+  --accent:#4b5bd6; --accent-ink:#ffffff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13141c; --card:#1c1e2a; --text:#e8e9f2; --muted:#9a9eb3; --line:#2d3042;
+    --accent:#8c98f5; --accent-ink:#12132a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13141c; --card:#1c1e2a; --text:#e8e9f2; --muted:#9a9eb3; --line:#2d3042;
+  --accent:#8c98f5; --accent-ink:#12132a;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:22px 16px 80px;}
+main{max-width:560px;margin:0 auto;}
+h1{font:600 1.6rem/1.2 Georgia,"Iowan Old Style",serif;margin:0 0 4px;}
+.sub{color:var(--muted);margin:0 0 20px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;}
+.t{display:block;font-weight:600;margin-bottom:8px;}
+.slider{display:flex;align-items:center;gap:12px;}
+.slider input{flex:1;accent-color:var(--accent);}
+.slider output{min-width:3.2em;text-align:right;font-weight:600;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;}
+.chips button,.act button{font:inherit;font-size:.95rem;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:8px 14px;cursor:pointer;}
+.chips button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);}
+textarea{width:100%;min-height:70px;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;resize:vertical;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.act{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:16px;}
+.act button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600;}
+#msg{color:var(--muted);font-size:.9rem;}
+</style>
+</head>
+<body>
+<main>
+  <h1>Günlük Not</h1>
+  <p class="sub">30 saniye. Yazmak yok, dokunman yeter. Sonunda “WhatsApp ile gönder”e bas.</p>
+  <div id="app"></div>
+  <div class="act">
+    <button class="primary" id="wa" type="button">WhatsApp ile gönder</button>
+    <button id="cp" type="button">Kopyala</button>
+    <span id="msg" role="status"></span>
+  </div>
+</main>
+<script>
+// Koçun WhatsApp numarası: ülke koduyla, boşluksuz (örn. "905XXXXXXXXX"). Boş bırakılırsa kişi seçme ekranı açılır.
+const PHONE = "905433783735";
+
+const SL = [
+  {id:"enerji", t:"Bugünkü enerjim"},
+  {id:"motivasyon", t:"Motivasyonum"}
+];
+const G = [
+  {id:"bugun", t:"Bugün neler vardı?", m:true, o:["Okul","Dershane","Deneme","Ders çalıştım","Dinlendim"]},
+  {id:"odak", t:"Odağım nasıldı?", m:true, o:["İyiydi","Dağınıktı","Telefon çekti","Sıkıldım","Yoruldum","Konu zordu"]},
+  {id:"zor", t:"Ne zorladı?", m:true, o:["Aynı şeyi tekrar etmek","Yorgunluk","İlerlemiyorum hissi","Baskı","Anlamsız geldi","Zor konu","Zorlanmadım"]},
+  {id:"uyku", t:"Dün gece uyku", m:false, o:["6 saatten az","6–7 saat","7–8 saat","8 saatten fazla"]},
+  {id:"iyi", t:"Bugün işe yarayan", m:true, o:["Küçük bir hedefi bitirdim","Mola verdim","Bir konuyu anladım","Hareket ettim","Biriyle konuştum","Hiçbiri"]},
+  {id:"konus", t:"Konuşmak ister miyim?", m:false, o:["Gerek yok","Mesajla yazışalım","Arayın"]}
+];
+const LBL = {bugun:"Bugün", odak:"Odak", zor:"Zorlayan", uyku:"Uyku", iyi:"İşe yarayan", konus:"Konuşma"};
+const vals = {enerji:5, motivasyon:5};
+const sel = {};
+const app = document.getElementById("app");
+
+SL.forEach(s=>{
+  const c = document.createElement("div"); c.className = "card";
+  const l = document.createElement("label"); l.className = "t"; l.textContent = s.t; l.setAttribute("for", s.id);
+  const w = document.createElement("div"); w.className = "slider";
+  const r = document.createElement("input"); r.type = "range"; r.min = 1; r.max = 10; r.value = 5; r.id = s.id;
+  const o = document.createElement("output"); o.textContent = "5/10";
+  r.addEventListener("input", ()=>{ vals[s.id] = Number(r.value); o.textContent = r.value + "/10"; });
+  w.appendChild(r); w.appendChild(o); c.appendChild(l); c.appendChild(w); app.appendChild(c);
+});
+G.forEach(g=>{
+  sel[g.id] = [];
+  const c = document.createElement("div"); c.className = "card";
+  const l = document.createElement("span"); l.className = "t"; l.textContent = g.t; c.appendChild(l);
+  const w = document.createElement("div"); w.className = "chips";
+  g.o.forEach(txt=>{
+    const b = document.createElement("button"); b.type = "button"; b.textContent = txt; b.setAttribute("aria-pressed","false");
+    b.addEventListener("click", ()=>{
+      const i = sel[g.id].indexOf(txt);
+      if(i>=0){ sel[g.id].splice(i,1); }
+      else { if(!g.m) sel[g.id] = []; sel[g.id].push(txt); }
+      w.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", sel[g.id].includes(x.textContent) ? "true":"false"));
+    });
+    w.appendChild(b);
+  });
+  c.appendChild(w); app.appendChild(c);
+});
+const cn = document.createElement("div"); cn.className = "card";
+cn.innerHTML = "<label class=\"t\" for=\"cumle\">Bir cümle (isteğe bağlı)</label><textarea id=\"cumle\"></textarea>";
+app.appendChild(cn);
+
+function build(){
+  const d = new Date().toLocaleDateString("tr-TR");
+  let t = "Günlük Not — Sude (" + d + ")\n";
+  t += "Enerji: " + vals.enerji + "/10\nMotivasyon: " + vals.motivasyon + "/10\n";
+  G.forEach(g=>{ if(sel[g.id].length) t += LBL[g.id] + ": " + sel[g.id].join(", ") + "\n"; });
+  const n = document.getElementById("cumle").value.trim();
+  if(n) t += "Not: " + n + "\n";
+  return t.trim();
+}
+const msg = document.getElementById("msg");
+function note(s){ msg.textContent = s; setTimeout(()=>{ if(msg.textContent===s) msg.textContent=""; }, 3000); }
+
+document.getElementById("wa").addEventListener("click", ()=>{
+  const url = "https://wa.me/" + PHONE + "?text=" + encodeURIComponent(build());
+  const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener";
+  document.body.appendChild(a); a.click(); a.remove();
+});
+document.getElementById("cp").addEventListener("click", ()=>{
+  const t = build();
+  const fallback = ()=>{
+    const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+    let ok = false; try{ ok = document.execCommand("copy"); }catch(e){}
+    ta.remove(); note(ok ? "Kopyalandı." : "Kopyalanamadı.");
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>note("Kopyalandı.")).catch(fallback);
+    } else { fallback(); }
+  }catch(e){ fallback(); }
+});
+</script>
+</body>
+</html>
